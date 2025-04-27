@@ -1,62 +1,62 @@
-import React, { useRef } from 'react';
-import EmailEditor, { EditorRef, EmailEditorProps } from 'react-email-editor';
+import React, { useEffect, useState } from 'react';
+import Editor from './components/Editor'
+
+export type Template = {
+  name: string;
+  html: string;
+  design: object;
+};
 
 const App: React.FC = () => {
-  const emailEditorRef = useRef<EditorRef>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedForLoad, setSelectedForLoad] = useState<Template | undefined>(undefined)
 
-  // Export HTML and design JSON
-  const exportHtml = () => {
-    const unlayer = emailEditorRef.current?.editor;
-    unlayer?.exportHtml((data: any) => {
-      const { design, html } = data;
-      // Save html and design to file or backend here
-      console.log('Template HTML:', html);
-      console.log('Template Design JSON:', design);
-      // Example: Save to file (see step 5)
-    });
-  };
+  useEffect(() => {
+    fetch('http://localhost:4000/templates')
+      .then(res => res.json())
+      .then(data => {
+        console.log('data : ', data)
+        console.log('DATA : ', data[0])
+        setTemplates(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
-  const onReady: EmailEditorProps['onReady'] = (unlayer) => {
-    // Editor is ready
-    // Optionally load a saved template here
-  };
 
-  const onLoad = () => {
-    const unlayer = emailEditorRef.current?.editor
-
-    unlayer?.initEditor({
-      id: 'emailEditor',
-      displayMode: 'web',
-      features: {
-        pageAnchors: true,
-        textEditor: {
-          tables: true
-        }
-      },
-      tools: {
-        carousel: {
-          enabled: true
-        },
-        anchor: {
-          enabled: true,
-          position: 2
-        }
-      }
-    })
-
-    unlayer?.setDisplayMode('web')
+  const loadrDesign = (designName: string) => {
+    setSelectedForLoad(templates.find((obj) => obj.name === designName))
   }
+
 
   return (
     <div>
-      <button onClick={exportHtml}>Export HTML</button>
-      <EmailEditor
-        editorId='emailEditor'
-        ref={emailEditorRef}
-        onLoad={onLoad}
-        onReady={onReady}
-        minHeight={window.innerWidth > 2200 ? '65vh' : '70vh'}
-      />
+      {loading && (
+        <h1>Loading...</h1>
+      )}
+
+      <div style={{
+        margin: '20px',
+        display: 'flex',
+        gap: '10px',
+        flexDirection: 'column',
+        justifyContent: 'center'
+      }}>
+        {templates && (
+          <>
+            {templates.map((temp, index) => (
+              <div key={index}>
+                <button onClick={() => loadrDesign(temp.name)}>Load {temp.name}</button>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+
+      <Editor pageData={selectedForLoad} />
+      <div dangerouslySetInnerHTML={{ __html: selectedForLoad?.html ?? '' }}></div>
     </div>
   );
 };
